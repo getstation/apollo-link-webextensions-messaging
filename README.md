@@ -1,6 +1,6 @@
 # apollo-link-webextensions-messaging
 
-> Apollo link that, in a WebExtension, forwards GraqhQL operations between processes
+> Apollo link that, in a WebExtension, forwards GraphQL operations between processes
 
 [![NPM Version][npm-image]][npm-url]
 
@@ -54,9 +54,13 @@ import { InMemoryCache } from 'apollo-cache-inmemory';
 const port = chrome.runtime.connect();
 
 const client = new ApolloClient({
-  // can aslo be `createWebExtensionsMessagingLink((operation) => port)`
+  // can also be `createWebExtensionsMessagingLink((operation) => port)`
   link: createWebExtensionsMessagingLink(port)),
   cache: new InMemoryCache(),
+  // from experience, if `queryDeduplication` is true,
+  // `client.watchQuery` unsubscription will not be
+  // properly passed down to the `link`
+  queryDeduplication: false,
 });
 
 client.query(MY_QUERY);
