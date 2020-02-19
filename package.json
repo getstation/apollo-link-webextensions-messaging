@@ -1,0 +1,36 @@
+{
+  "name": "apollo-link-webextensions-messaging",
+  "version": "1.0.0-rc.0",
+  "description": "",
+  "main": "lib/index.js",
+  "types": "lib/index.d.ts",
+  "scripts": {
+    "test": "jest .",
+    "build": "tsc",
+    "lint": "eslint ./src/ --ext .js,.jsx,.ts,.tsx",
+    "prepare": "npm run build",
+    "prepublishOnly": "npm test && npm run lint"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@types/jest": "^25.1.2",
+    "@typescript-eslint/eslint-plugin": "^2.20.0",
+    "@typescript-eslint/parser": "^2.20.0",
+    "apollo-cache-inmemory": "^1.6.5",
+    "apollo-client": "^2.6.8",
+    "eslint": "^6.8.0",
+    "graphql": "^14.6.0",
+    "graphql-tag": "^2.10.3",
+    "jest": "^25.1.0",
+    "ts-jest": "^25.2.0",
+    "typescript": "^3.7.5"
+  },
+  "peerDependencies": {
+    "graphql": "*"
+  },
+  "dependencies": {
+    "apollo-link": "^1.2.13"
+  }
+}
