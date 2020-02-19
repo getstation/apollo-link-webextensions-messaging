@@ -57,6 +57,31 @@ export const isOperationResultRPC = (message: Record<string, unknown>, operation
   (message.method === OPERATION_RESULT_METHOD) &&
   (isRecord(message.params) && message.params.operationId === operationId);
 
+// executor -> requester
+export type OperationErrorRPC = RPCNotificationMessage<{
+  operationId: string;
+  errorMessage: string;
+}>
+export const OPERATION_ERROR_METHOD = 'operation-error';
+export const operationErrorRPC = (operationId: string, errorValue: unknown): OperationErrorRPC => {
+  let errorMessage = '<unknow error>';
+  if (errorValue instanceof Error) {
+    errorMessage = errorValue.message;
+  }
+  return {
+    jsonrpc: '2.0',
+    method: OPERATION_ERROR_METHOD,
+    params: {
+      operationId,
+      errorMessage,
+    }
+  };
+};
+export const isOperationErrorRPC = (message: Record<string, unknown>, operationId: string): message is OperationErrorRPC =>
+  isRPCNotificationMessage(message) &&
+  (message.method === OPERATION_ERROR_METHOD) &&
+  (isRecord(message.params) && message.params.operationId === operationId);
+
 
 // executor -> requester
 export type OperationCompleteRPC = RPCNotificationMessage<{ operationId: string }>;
@@ -85,3 +110,7 @@ export const operationUnsubscribeRPC = (operationId: string): OperationUnsubscri
     operationId,
   }
 });
+export const isOperationUnsubscribeRPC = (message: Record<string, unknown>, operationId: string): message is OperationUnsubscribeRPC =>
+  isRPCNotificationMessage(message) &&
+  (message.method === OPERATION_UNSUBSCRIBE_METHOD) &&
+  (isRecord(message.params) && message.params.operationId === operationId);

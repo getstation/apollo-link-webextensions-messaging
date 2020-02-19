@@ -9,15 +9,28 @@ import {
   isOperationResultRPC,
   isOperationCompleteRPC,
   isOperationRequestRPC,
+  operationErrorRPC,
+  isOperationErrorRPC,
+  isOperationUnsubscribeRPC,
 } from './rpcs';
 import { MessagingPort } from './types';
 
 type CreateWebExtensionMessagingExecutorListenerOptions = {
+  /**
+   * The Apollo link to execute the received GraphQL request upon.
+   */
   link: ApolloLink;
 };
+
 /**
- * 
- * @param param0 
+ * Create a [`onConnect`][onConnect] listener that'll execute received
+ * GraphQL request against the given [Apollo Link `link`][apollo-link].
+ *
+ * Operations passed to link will get a `context` that has key `port`
+ * with the requesting `Port`.
+ *
+ * [onConnect]: https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/API/runtime/onConnect
+ * [apollo-link]: https://www.apollographql.com/docs/link/
  */
 export function createWebExtensionMessagingExecutorListener<T extends MessagingPort>(
   { link }: CreateWebExtensionMessagingExecutorListenerOptions
@@ -37,11 +50,28 @@ export function createWebExtensionMessagingExecutorListener<T extends MessagingP
             port,
           }
         };
-        // todo: unsubscribe
-        // todo: unsubscribe on disconnect
-        const unsubscribe = execute(link, request).subscribe({
+
+        const operationOnMessageListener = (message: Record<string, unknown>): void => {
+          if (isOperationUnsubscribeRPC(message, operationId)) {
+            close();
+          }
+        };
+        port.onMessage.addListener(operationOnMessageListener);
+
+        const portDisconnectListener = (): void => {
+          close();
+        };
+        port.onDisconnect.addListener(portDisconnectListener);
+
+        const close = (): void => {
+          subscription.unsubscribe();
+          port.onMessage.removeListener(operationOnMessageListener);
+          port.onDisconnect.removeListener(portDisconnectListener);
+        };
+
+        const subscription = execute(link, request).subscribe({
           next: res => port.postMessage(operationResultRPC(operationId, res)),
-          // todo error: 
+          error: error => port.postMessage(operationErrorRPC(operationId, error)),
           complete: () => port.postMessage(operationCompleteRPC(operationId)),
         })
       }
@@ -52,9 +82,17 @@ export function createWebExtensionMessagingExecutorListener<T extends MessagingP
 type PortOrPortFn<T extends MessagingPort> = T | ((operation: GraphQLRequest) => T);
 
 /**
- * 
+ * Create an [Apollo Link][apollo-link] that'll transfer the GraphQL request
+ * over the _Port_ `port`.
+ *
+ * [apollo-link]: https://www.apollographql.com/docs/link/
  */
-export function createWebExtensionsMessagingLink<T extends MessagingPort>(portFn: PortOrPortFn<T>): ApolloLink {
+export function createWebExtensionsMessagingLink<T extends MessagingPort>(
+  /**
+   * The `Port` or a function that should return a `Port`.
+   */
+  portFn: PortOrPortFn<T>
+): ApolloLink {
   return new ApolloLink((operation) => {
     const port = typeof portFn === 'function' ? portFn(operation) : portFn;
     const operationId = operation.toKey();
@@ -66,12 +104,14 @@ export function createWebExtensionsMessagingLink<T extends MessagingPort>(portFn
         if (isOperationResultRPC(message, operationId)) {
           observer.next(message.params.result);
         }
-        if (isOperationCompleteRPC(message, operationId)){
+        if (isOperationCompleteRPC(message, operationId)) {
           observer.complete();
+        }
+        if (isOperationErrorRPC(message, operationId)) {
+          observer.error(new Error(message.params.errorMessage));
         }
       };
 
-      // todo: on error
       port.onMessage.addListener(onMessageListener);
 
       return (): void => {
