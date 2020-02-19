@@ -40,8 +40,8 @@ export class MockPort extends EventEmitter implements MessagingPort {
     this.emit('post-message', message);
   }
 
-  disconnect() {
-    this.emit('disconnect');
+  disconnect(): void {
+    this.emit('do-disconnect');
   }
 };
 
@@ -52,9 +52,9 @@ export function createMessagingPorts(): [MockPort, MockPort] {
   port1.on('post-message', (...args) => port2.emit('message', ...args));
   port2.on('post-message', (...args) => port1.emit('message', ...args));
 
-  port1.on('disconnect', (...args) => port2.emit('disconnect', ...args));
-  port2.on('disconnect', (...args) => port1.emit('disconnect', ...args));
+  port1.on('do-disconnect', (...args) => port2.emit('disconnect', ...args));
+  port2.on('do-disconnect', (...args) => port1.emit('disconnect', ...args));
 
 
   return [port1, port2];
-};
+}

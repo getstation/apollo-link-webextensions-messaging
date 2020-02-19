@@ -2,21 +2,23 @@ import { ApolloClient } from 'apollo-client';
 import { InMemoryCache, NormalizedCacheObject } from 'apollo-cache-inmemory';
 import { print } from 'graphql';
 import gql from 'graphql-tag';
-import { Observable, FetchResult } from 'apollo-link';
+import { Observable, FetchResult, ApolloLink } from 'apollo-link';
+import { onError } from 'apollo-link-error';
+import delay from 'delay';
 
 import { createMessagingPorts, MockPort } from "../test-utils/createMessagingPorts";
 import MockLink from "../test-utils/mockLink";
 
 import { createWebExtensionMessagingExecutorListener, createWebExtensionsMessagingLink} from '..';
 import { Operation } from 'apollo-link';
+import { ServerError, ServerParseError } from 'apollo-link-http-common';
 
-
-const observableOfWithDelay = <T>(value: T, delayMs: number = 1000) => new Observable<T>(observer => {
-  let timer = setTimeout(() => {
+const observableOfWithDelay = <T>(value: T, delayMs = 1000): Observable<T> => new Observable<T>(observer => {
+  const timer = setTimeout(() => {
     observer.next(value);
     observer.complete();
   }, delayMs);
-  return () => clearTimeout(timer);
+  return (): void => clearTimeout(timer);
 });
 
 let requesterPort: MockPort;
@@ -39,10 +41,15 @@ describe('Basic end to end', () => {
   beforeEach(() => {
     client = new ApolloClient({
       link: createWebExtensionsMessagingLink(requesterPort),
-      cache: new InMemoryCache()
+      cache: new InMemoryCache(),
+      // from experience, if `queryDeduplication` is true,
+      // `client.watchQuery` unsubscription will not be
+      // properly passed down to the `link`
+      queryDeduplication: false,
     });
-    requestHandler = jest.fn((_operation: Operation) => Observable.of({ data: { foo: 'bar' } }));
 
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    requestHandler = jest.fn((_operation: Operation) => Observable.of({ data: { foo: 'bar' } }));
     createWebExtensionMessagingExecutorListener({
       link: new MockLink(requestHandler)
     })(executorPort);
@@ -92,14 +99,115 @@ describe('Basic end to end', () => {
     expect(data2).toEqual({ foo2: 'bar' });
   });
 
+  it('should not leak listeners request after request', async () => {
+    const requesterPortMessageListeners = requesterPort.listenerCount('message');
+    const executorPortMessageListeners = executorPort.listenerCount('message');
+    const requesterPortDisconnectListeners = requesterPort.listenerCount('disconnect');
+    const executorPortDisconnectListeners = executorPort.listenerCount('disconnect');
+
+    await client.query({ query });
+
+    expect(requesterPort.listenerCount('message')).toEqual(requesterPortMessageListeners);
+    expect(executorPort.listenerCount('message')).toEqual(executorPortMessageListeners);
+    expect(requesterPort.listenerCount('disconnect')).toEqual(requesterPortDisconnectListeners);
+    expect(executorPort.listenerCount('disconnect')).toEqual(executorPortDisconnectListeners);
+  });
+
+  it('should be able to stream a response', () => {
+    requestHandler.mockImplementation(() => new Observable(observer => {
+      const timer = setTimeout(() => {
+        observer.next({ data: { foo: 'bar' } });
+      }, 500);
+
+      const timer2 = setTimeout((): void => {
+        observer.next({ data: { foo: 'foo' } });
+        observer.complete();
+      }, 1000);
+      return (): void => {
+        clearTimeout(timer);
+        clearTimeout(timer2);
+      };
+    }));
+
+    return new Promise((resolve) => {
+      const fooValues: string[] = [];
+      client.watchQuery({ query })
+        .subscribe(res => {
+          fooValues.push(res.data.foo);
+          if (fooValues.length == 2) {
+            expect(fooValues[0]).toEqual('bar');
+            expect(fooValues[1]).toEqual('foo');
+            resolve();
+          }
+        });
+    })
+  });
+
+  it('should forward executor\'s errors', async () => {
+    const onNetworkError = jest.fn<unknown, [Error | ServerError | ServerParseError | undefined]>();
+
+    client = new ApolloClient({
+      link: ApolloLink.from([
+        onError(({ networkError }) => {
+          onNetworkError(networkError)
+        }),
+        createWebExtensionsMessagingLink(requesterPort),
+      ]),
+      cache: new InMemoryCache(),
+      queryDeduplication: false,
+    });
+    requestHandler.mockImplementation(() => new Observable(observer => {
+      observer.error(new Error('An error'));
+    }));
+
+    // execute but ignore errors
+    try {
+      await client.query({ query });
+    } catch(e) {
+      // do nothing
+    }
+
+    expect(onNetworkError.mock.calls[0][0]).toBeDefined();
+    if (!onNetworkError.mock.calls[0][0]) throw new Error('no call');
+
+    expect(onNetworkError.mock.calls[0][0].message).toEqual('An error');
+  });
+
+  it('should unsubscribe on executor when unsubsribe on request', async () => {
+    const executorUnsubscribeSpy = jest.fn();
+
+    requestHandler.mockImplementation(() => new Observable(() => {
+      return (): void => {
+        executorUnsubscribeSpy();
+      }
+    }));
+
+    const subscription = client.watchQuery({ query })
+      .subscribe(() => {/* do nothing*/});
+
+    await delay(100);
+
+    subscription.unsubscribe();
+
+    expect(executorUnsubscribeSpy).toHaveBeenCalled();
+  });
+
+  it('should unsubscribe on executor when port is disconnected', async () => {
+    const executorUnsubscribeSpy = jest.fn();
+
+    requestHandler.mockImplementation(() => new Observable(() => {
+      return (): void => {
+        executorUnsubscribeSpy();
+      }
+    }));
+
+    client.watchQuery({ query })
+      .subscribe(() => {/* do nothing*/ });
+
+    await delay(100);
+
+    requesterPort.disconnect();
+
+    expect(executorUnsubscribeSpy).toHaveBeenCalled();
+  });
 });
-
-  // test streaming result
-
-  // test error on executor
-
-  // test request unsubsribe should unsubscribe on executor
-
-  // test port disconect should usubscribe on executor
-
-  // test executor completion should complete on requester
