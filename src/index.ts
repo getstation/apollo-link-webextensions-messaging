@@ -1,5 +1,6 @@
 import { ApolloLink, GraphQLRequest, execute, Observable } from 'apollo-link';
 import { parse } from 'graphql';
+import * as uniqid from 'uniqid';
 
 import {
   operationRequestRPC,
@@ -95,7 +96,7 @@ export function createWebExtensionsMessagingLink<T extends MessagingPort>(
 ): ApolloLink {
   return new ApolloLink((operation) => {
     const port = typeof portFn === 'function' ? portFn(operation) : portFn;
-    const operationId = operation.toKey();
+    const operationId = uniqid(`${operation.operationName}-`);
 
     return new Observable(observer => {
       port.postMessage(operationRequestRPC(operationId, operation));
