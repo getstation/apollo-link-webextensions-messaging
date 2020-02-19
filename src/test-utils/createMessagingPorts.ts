@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/ban-ts-ignore */
 import { EventEmitter } from 'events';
 import { MessagingPort, Event, PortDisconnectEvent, PortMessageEvent } from '../types';
 
@@ -11,12 +12,12 @@ export class EventEmitterBasedEvent<T extends Function> implements Event<T> {
     this.eventName = eventName;
   }
 
-  addListener(listener: T) {
+  addListener(listener: T): void {
     // @ts-ignore Function and (..args) => void
     this.ee.addListener(this.eventName, listener);
   }
   
-  removeListener(listener: T) {
+  removeListener(listener: T): void {
     // @ts-ignore Function and (..args) => void
     this.ee.removeListener(this.eventName, listener);
   }
@@ -36,15 +37,18 @@ export class MockPort extends EventEmitter implements MessagingPort {
     ID +=1;
   }
 
-  postMessage(message: Record<string, unknown>) {
+  postMessage(message: Record<string, unknown>): void {
     this.emit('post-message', message);
   }
 
   disconnect(): void {
     this.emit('do-disconnect');
   }
-};
+}
 
+/**
+ * Will create 2 MessagingPort that communicate with one another.
+ */
 export function createMessagingPorts(): [MockPort, MockPort] {
   const port1 = new MockPort();
   const port2 = new MockPort();
