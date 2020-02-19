@@ -55,7 +55,7 @@ const port = chrome.runtime.connect();
 
 const client = new ApolloClient({
   // can also be `createWebExtensionsMessagingLink((operation) => port)`
-  link: createWebExtensionsMessagingLink(port)),
+  link: createWebExtensionsMessagingLink(port),
   cache: new InMemoryCache(),
   // from experience, if `queryDeduplication` is true,
   // `client.watchQuery` unsubscription will not be
