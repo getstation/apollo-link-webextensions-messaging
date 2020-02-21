@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/ban-ts-ignore */
 import { EventEmitter } from 'events';
-import { MessagingPort, Event, PortDisconnectEvent, PortMessageEvent } from '../types';
+import { MessagingPort, Event, PortDisconnectEvent, PortMessageEvent, Message } from '../types';
 
 let ID = 0;
 
@@ -37,7 +37,7 @@ export class MockPort extends EventEmitter implements MessagingPort {
     ID +=1;
   }
 
-  postMessage(message: Record<string, unknown>): void {
+  postMessage(message: Message): void {
     this.emit('post-message', message);
   }
 

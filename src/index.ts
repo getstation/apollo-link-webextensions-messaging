@@ -14,7 +14,7 @@ import {
   isOperationErrorRPC,
   isOperationUnsubscribeRPC,
 } from './rpcs';
-import { MessagingPort } from './types';
+import { MessagingPort, Message } from './types';
 
 type CreateWebExtensionMessagingExecutorListenerOptions = {
   /**
@@ -52,7 +52,7 @@ export function createWebExtensionMessagingExecutorListener<T extends MessagingP
           }
         };
 
-        const operationOnMessageListener = (message: Record<string, unknown>): void => {
+        const operationOnMessageListener = (message: Message): void => {
           if (isOperationUnsubscribeRPC(message, operationId)) {
             close();
           }
@@ -101,7 +101,7 @@ export function createWebExtensionsMessagingLink<T extends MessagingPort>(
     return new Observable(observer => {
       port.postMessage(operationRequestRPC(operationId, operation));
 
-      const onMessageListener = (message: Record<string, unknown>): void => {
+      const onMessageListener = (message: Message): void => {
         if (isOperationResultRPC(message, operationId)) {
           observer.next(message.params.result);
         }

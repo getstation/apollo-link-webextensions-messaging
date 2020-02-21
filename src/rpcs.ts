@@ -1,12 +1,15 @@
+/* eslint-disable @typescript-eslint/ban-ts-ignore */
 import { Operation } from 'apollo-link';
 import { print, ExecutionResult, GraphQLError } from 'graphql';
+import { Message } from './types';
 
 export type RPCNotificationMessage<TParam> = {
   jsonrpc: '2.0';
   method: string;
   params: TParam;
 };
-export const isRPCNotificationMessage = <T>(message: Record<string, unknown>): message is RPCNotificationMessage<T> =>
+export const isRPCNotificationMessage = <T>(message: Message): message is RPCNotificationMessage<T> =>
+  //@ts-ignore object type does not allow me to check properties
   message.jsonrpc === '2.0';
 
 const isRecord = (r: unknown): r is Record<string, unknown> => typeof r === 'object' && r !== null;
@@ -31,7 +34,7 @@ export const operationRequestRPC = (operationId: string, operation: Operation): 
     context: operation.getContext(),
   }
 });
-export const isOperationRequestRPC = (message: Record<string, unknown>): message is OperationRequestRPC =>
+export const isOperationRequestRPC = (message: Message): message is OperationRequestRPC =>
   isRPCNotificationMessage(message) && (message.method === OPERATION_REQUEST_METHOD);
 
 // executor -> requester
@@ -52,7 +55,7 @@ export const operationResultRPC = (operationId: string, result: ExecutionResult)
     result,
   }
 });
-export const isOperationResultRPC = (message: Record<string, unknown>, operationId: string): message is OperationResultRPC =>
+export const isOperationResultRPC = (message: Message, operationId: string): message is OperationResultRPC =>
   isRPCNotificationMessage(message) &&
   (message.method === OPERATION_RESULT_METHOD) &&
   (isRecord(message.params) && message.params.operationId === operationId);
@@ -77,7 +80,7 @@ export const operationErrorRPC = (operationId: string, errorValue: unknown): Ope
     }
   };
 };
-export const isOperationErrorRPC = (message: Record<string, unknown>, operationId: string): message is OperationErrorRPC =>
+export const isOperationErrorRPC = (message: Message, operationId: string): message is OperationErrorRPC =>
   isRPCNotificationMessage(message) &&
   (message.method === OPERATION_ERROR_METHOD) &&
   (isRecord(message.params) && message.params.operationId === operationId);
@@ -93,7 +96,7 @@ export const operationCompleteRPC = (operationId: string): OperationCompleteRPC 
     operationId,
   }
 });
-export const isOperationCompleteRPC = (message: Record<string, unknown>, operationId: string): message is OperationCompleteRPC =>
+export const isOperationCompleteRPC = (message: Message, operationId: string): message is OperationCompleteRPC =>
   isRPCNotificationMessage(message) &&
   (message.method === OPERATION_COMPLETE_METHOD) &&
   (isRecord(message.params) && message.params.operationId === operationId);
@@ -110,7 +113,7 @@ export const operationUnsubscribeRPC = (operationId: string): OperationUnsubscri
     operationId,
   }
 });
-export const isOperationUnsubscribeRPC = (message: Record<string, unknown>, operationId: string): message is OperationUnsubscribeRPC =>
+export const isOperationUnsubscribeRPC = (message: Message, operationId: string): message is OperationUnsubscribeRPC =>
   isRPCNotificationMessage(message) &&
   (message.method === OPERATION_UNSUBSCRIBE_METHOD) &&
   (isRecord(message.params) && message.params.operationId === operationId);

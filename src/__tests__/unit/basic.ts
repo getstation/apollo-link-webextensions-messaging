@@ -6,10 +6,10 @@ import { Observable, FetchResult, ApolloLink } from 'apollo-link';
 import { onError } from 'apollo-link-error';
 import delay from 'delay';
 
-import { createMessagingPorts, MockPort } from "../test-utils/createMessagingPorts";
-import MockLink from "../test-utils/mockLink";
+import { createMessagingPorts, MockPort } from "../../test-utils/createMessagingPorts";
+import MockLink from "../../test-utils/mockLink";
 
-import { createWebExtensionMessagingExecutorListener, createWebExtensionsMessagingLink} from '..';
+import { createWebExtensionMessagingExecutorListener, createWebExtensionsMessagingLink} from '../..';
 import { Operation } from 'apollo-link';
 import { ServerError, ServerParseError } from 'apollo-link-http-common';
 
