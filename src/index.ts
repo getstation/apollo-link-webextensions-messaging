@@ -35,7 +35,7 @@ type CreateWebExtensionMessagingExecutorListenerOptions = {
  */
 export function createWebExtensionMessagingExecutorListener<T extends MessagingPort>(
   { link }: CreateWebExtensionMessagingExecutorListenerOptions
-  ): ((port: T) => void) {
+): ((port: T) => void) {
   return (port: T): void => {
     port.onMessage.addListener(message => {
       if (isOperationRequestRPC(message)) {
@@ -116,8 +116,17 @@ export function createWebExtensionsMessagingLink<T extends MessagingPort>(
       port.onMessage.addListener(onMessageListener);
 
       return (): void => {
-        port.postMessage(operationUnsubscribeRPC(operationId));
-        port.onMessage.removeListener(onMessageListener);
+        /**
+         * In some cases like remote disconnection, port cleaning
+         * will be unavailable. We catch error theses errors and warn
+         * instead of propagating errors
+         */
+        try {
+          port.postMessage(operationUnsubscribeRPC(operationId));
+          port.onMessage.removeListener(onMessageListener);
+        } catch (e) {
+          console.warn(e);
+        }
       };
     });
   })
