@@ -9,7 +9,8 @@ export interface Event<T extends (...args: any[]) => any> {
   removeListener(callback: T): void;
 }
 
-export type Message = Record<string, unknown>;
+// eslint-disable-next-line @typescript-eslint/ban-types
+export type Message = Record<string, unknown> | object;
 
 export type PortDisconnectEvent = Event<(port: MessagingPort) => void>
 export type PortMessageEvent = Event<(message: Message) => void>
