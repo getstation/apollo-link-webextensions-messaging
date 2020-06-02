@@ -1,10 +1,9 @@
-/* eslint-disable @typescript-eslint/ban-ts-ignore */
 import { EventEmitter } from 'events';
 import { MessagingPort, Event, PortDisconnectEvent, PortMessageEvent, Message } from '../types';
 
 let ID = 0;
 
-export class EventEmitterBasedEvent<T extends Function> implements Event<T> {
+export class EventEmitterBasedEvent<T extends (...args: any[]) => any> implements Event<T> {
   private ee: EventEmitter;
   private eventName: string;
   constructor(ee: EventEmitter, eventName: string) {
@@ -13,12 +12,10 @@ export class EventEmitterBasedEvent<T extends Function> implements Event<T> {
   }
 
   addListener(listener: T): void {
-    // @ts-ignore Function and (..args) => void
     this.ee.addListener(this.eventName, listener);
   }
-  
+
   removeListener(listener: T): void {
-    // @ts-ignore Function and (..args) => void
     this.ee.removeListener(this.eventName, listener);
   }
 

@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/ban-ts-ignore */
 import { Operation } from 'apollo-link';
 import { print, ExecutionResult, GraphQLError } from 'graphql';
 import { Message } from './types';
@@ -9,7 +8,6 @@ export type RPCNotificationMessage<TParam> = {
   params: TParam;
 };
 export const isRPCNotificationMessage = <T>(message: Message): message is RPCNotificationMessage<T> =>
-  //@ts-ignore object type does not allow me to check properties
   message.jsonrpc === '2.0';
 
 const isRecord = (r: unknown): r is Record<string, unknown> => typeof r === 'object' && r !== null;
@@ -39,7 +37,7 @@ export const isOperationRequestRPC = (message: Message): message is OperationReq
 
 // executor -> requester
 export interface SerializedExecutionResult {
-  data?: object | null;
+  data?: Record<string, unknown> | null;
   errors?: readonly GraphQLError[];
 }
 export type OperationResultRPC = RPCNotificationMessage<{

@@ -4,12 +4,12 @@
   - @types/chrome
   - @types/firefox-webext-browser
 */
-export interface Event<T extends Function> {
+export interface Event<T extends (...args: any[]) => any> {
   addListener(callback: T): void;
   removeListener(callback: T): void;
 }
 
-export type Message = Record<string, unknown> | object;
+export type Message = Record<string, unknown>;
 
 export type PortDisconnectEvent = Event<(port: MessagingPort) => void>
 export type PortMessageEvent = Event<(message: Message) => void>
