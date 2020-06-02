@@ -8,7 +8,7 @@ export type RPCNotificationMessage<TParam> = {
   params: TParam;
 };
 export const isRPCNotificationMessage = <T>(message: Message): message is RPCNotificationMessage<T> =>
-  message.jsonrpc === '2.0';
+  (message as Record<string, unknown>).jsonrpc === '2.0';
 
 const isRecord = (r: unknown): r is Record<string, unknown> => typeof r === 'object' && r !== null;
 
