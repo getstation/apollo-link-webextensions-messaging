@@ -12,7 +12,7 @@ import {
   isOperationRequestRPC,
   operationErrorRPC,
   isOperationErrorRPC,
-  isOperationUnsubscribeRPC, parseRPCNotificationMessage,
+  isOperationUnsubscribeRPC, parseRPCNotificationMessage, OperationRequestRPC,
 } from './rpcs';
 import { MessagingPort, Message } from './types';
 
@@ -37,9 +37,11 @@ export function createWebExtensionMessagingExecutorListener<T extends MessagingP
   { link }: CreateWebExtensionMessagingExecutorListenerOptions
 ): ((port: T) => void) {
   return (port: T): void => {
-    port.onMessage.addListener(message => {
+    port.onMessage.addListener((message: Message) => {
       if (isOperationRequestRPC(message)) {
-        const { params } = message;
+        const m = parseRPCNotificationMessage(message) as OperationRequestRPC;
+        if (m === null) return;
+        const { params } = m;
         const { operationId } = params;
         const request: GraphQLRequest = {
           operationName: params.operationName,
