@@ -12,7 +12,7 @@ import {
   isOperationRequestRPC,
   operationErrorRPC,
   isOperationErrorRPC,
-  isOperationUnsubscribeRPC,
+  isOperationUnsubscribeRPC, parseRPCNotificationMessage, OperationRequestRPC,
 } from './rpcs';
 import { MessagingPort, Message } from './types';
 
@@ -37,9 +37,11 @@ export function createWebExtensionMessagingExecutorListener<T extends MessagingP
   { link }: CreateWebExtensionMessagingExecutorListenerOptions
 ): ((port: T) => void) {
   return (port: T): void => {
-    port.onMessage.addListener(message => {
+    port.onMessage.addListener((message: Message) => {
       if (isOperationRequestRPC(message)) {
-        const { params } = message;
+        const m = parseRPCNotificationMessage(message) as OperationRequestRPC;
+        if (m === null) return;
+        const { params } = m;
         const { operationId } = params;
         const request: GraphQLRequest = {
           operationName: params.operationName,
@@ -53,7 +55,10 @@ export function createWebExtensionMessagingExecutorListener<T extends MessagingP
         };
 
         const operationOnMessageListener = (message: Message): void => {
-          if (isOperationUnsubscribeRPC(message, operationId)) {
+          const m = parseRPCNotificationMessage(message);
+          if (m === null) return;
+
+          if (isOperationUnsubscribeRPC(m, operationId)) {
             close();
           }
         };
@@ -102,14 +107,17 @@ export function createWebExtensionsMessagingLink<T extends MessagingPort>(
       port.postMessage(operationRequestRPC(operationId, operation));
 
       const onMessageListener = (message: Message): void => {
-        if (isOperationResultRPC(message, operationId)) {
-          observer.next(message.params.result);
+        const m = parseRPCNotificationMessage(message);
+        if (m === null) return;
+
+        if (isOperationResultRPC(m, operationId)) {
+          observer.next(m.params.result);
         }
-        if (isOperationCompleteRPC(message, operationId)) {
+        if (isOperationCompleteRPC(m, operationId)) {
           observer.complete();
         }
-        if (isOperationErrorRPC(message, operationId)) {
-          observer.error(new Error(message.params.errorMessage));
+        if (isOperationErrorRPC(m, operationId)) {
+          observer.error(new Error(m.params.errorMessage));
         }
       };
 
